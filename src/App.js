@@ -21,13 +21,11 @@ export default function App() {
   const [largeImageURL, setLargeImageURL] = useState('');
   const [tags, setTags] = useState('');
 
-  useEffect(prevSearchQuery => {
+  useEffect(() => {
     if (!searchQuery) {
       return;
     }
-    if (prevSearchQuery === searchQuery) {
-        return;
-      }
+    
     fetchImages();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
