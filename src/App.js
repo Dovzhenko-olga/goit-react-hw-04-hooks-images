@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import Loader from "react-loader-spinner";
 import imagesApi from './services/images-api';
@@ -12,44 +12,58 @@ import styles from './App.module.css';
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import 'react-toastify/dist/ReactToastify.css';
 
+export default function App() {
+  const [hits, setHits] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [tags, setTags] = useState('');
 
-class App extends Component {
-  state = {
-    hits: [],
-    currentPage: 1,
-    searchQuery: '',
-    isLoading: false,
-    showModal: false,
-    largeImageURL: '',
-    tags: '',
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.searchQuery !== this.state.searchQuery) {
-      this.fetchImages();
+  useEffect(prevSearchQuery => {
+    if (!searchQuery) {
+      return;
     }
-  }
+    if (prevSearchQuery === searchQuery) {
+        return;
+      }
+    fetchImages();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
-  onChangeQuery = query => {
-    this.setState({ searchQuery: query, currentPage: 1, hits: [], error: null });
-  }
+  
+  const onChangeQuery = query => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    setHits([]);
+  };
 
-  fetchImages = () => {
-    const { currentPage, searchQuery } = this.state;
+  const onModal = ({ largeImageURL, tags }) => {
+    setLargeImageURL(largeImageURL);
+    setTags(tags);
+    toggleModal();
+  };
+
+const toggleModal = () => {
+  setShowModal(!showModal);
+  };
+
+  const fetchImages = () => {
+    
+  setIsLoading(true);
+  
     const options = { searchQuery, currentPage };
 
-    this.setState({ isLoading: true });
-
     imagesApi.fetchImages(options)
-      .then(hits => {
-        if(hits.length === 0) {
+      .then(images => {
+        if (images.length === 0) {
           toast.info('Try again!', {
-          className: styles.toaster
-          })}
-        this.setState(prevState => ({
-          hits: [...prevState.hits, ...hits],
-          currentPage: prevState.currentPage + 1,
-        }));
+            className: styles.toaster
+          })
+        }
+        setHits([...hits, ...images]);
+        setCurrentPage(currentPage + 1);
       })
       .then(() => {
         window.scrollTo({
@@ -57,37 +71,23 @@ class App extends Component {
           behavior: 'smooth',
         });
       })
-      .catch(() => {toast.info('Try again!', {
-        className: styles.toaster
-      })})
-      .finally(() => this.setState({ isLoading: false }));
-  };
+      .catch(() => {
+        toast.info('Try again!', {
+          className: styles.toaster
+        })
+      })
+      .finally(() => setIsLoading(false));
+  }  
 
-    onModal = ({ largeImageURL, tags }) => {
-    this.setState({
-      largeImageURL: largeImageURL,
-      tags: tags,
-    });
-    this.toggleModal();
-  };
-
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
-  };
-
-  render() {
-    const { hits, isLoading, showModal, largeImageURL, tags } = this.state;
-    const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
+  const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
 
     return (
       <Container>
         
-        <Searchbar onSubmit={this.onChangeQuery} />
-        <ImageGallery hits={hits} onClick={this.onModal}/>
+        <Searchbar onSubmit={onChangeQuery} />
+        <ImageGallery hits={hits} onClick={onModal}/>
           
-        {shouldRenderLoadMoreButton && <Button onClick={this.fetchImages} />}
+        {shouldRenderLoadMoreButton && <Button onClick={fetchImages} />}
 
         {isLoading &&
           <Loader
@@ -98,7 +98,7 @@ class App extends Component {
             className={styles.Loader}
           />}
         
-        {showModal && (<Modal onClose={this.toggleModal}>
+        {showModal && (<Modal onClose={toggleModal}>
            <img src={largeImageURL} alt={tags} />
         </Modal>
         )}
@@ -106,6 +106,3 @@ class App extends Component {
       </Container>
     );
   }
-}
-
-export default App;
